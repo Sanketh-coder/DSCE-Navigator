@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
@@ -7,31 +8,80 @@
         android:id="@+id/map"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
-    <AutoCompleteTextView
-        android:id="@+id/searchBox"
+
+    <!-- dark fade so the status bar icons stay readable over the map -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="110dp"
+        android:layout_gravity="top"
+        android:background="@drawable/bg_scrim_top" />
+
+    <!-- floating search bar -->
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="top"
-        android:layout_margin="12dp"
-        android:background="#FFFFFF"
-        android:padding="12dp"
-        android:hint="Search department or building"
-        android:textColor="#000000"
-        android:textColorHint="#757575"
-        android:completionThreshold="1"
-        android:inputType="text"
-        android:singleLine="true" />
+        android:fitsSystemWindows="true">
 
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="14dp"
+            app:cardBackgroundColor="@color/app_card"
+            app:cardCornerRadius="30dp"
+            app:cardElevation="10dp"
+            app:strokeColor="@color/card_stroke"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="18dp"
+                android:paddingEnd="10dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🔍"
+                    android:textSize="18sp" />
+
+                <AutoCompleteTextView
+                    android:id="@+id/searchBox"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="@null"
+                    android:completionThreshold="1"
+                    android:hint="Where do you want to go?"
+                    android:inputType="text"
+                    android:padding="16dp"
+                    android:popupBackground="@color/app_card"
+                    android:singleLine="true"
+                    android:textColor="@color/app_text"
+                    android:textColorHint="@color/app_text_secondary"
+                    android:textSize="15sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+    </FrameLayout>
+
+    <!-- bottom distance pill -->
     <TextView
         android:id="@+id/distanceText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|center_horizontal"
-        android:layout_marginBottom="64dp"
-        android:background="#FFFFFF"
-        android:padding="12dp"
+        android:layout_marginBottom="48dp"
+        android:background="@drawable/bg_pill_card"
+        android:elevation="10dp"
+        android:fontFamily="sans-serif-medium"
+        android:paddingStart="24dp"
+        android:paddingTop="14dp"
+        android:paddingEnd="24dp"
+        android:paddingBottom="14dp"
         android:text="Select a destination"
-        android:textColor="#000000"
-        android:textSize="16sp" />
+        android:textColor="@color/app_text"
+        android:textSize="15sp" />
 
 </FrameLayout>
