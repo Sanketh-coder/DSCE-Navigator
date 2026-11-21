@@ -30,6 +30,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import android.content.Intent;
+
 public class MainActivity extends AppCompatActivity {
 
     private MapView map;
@@ -200,6 +202,9 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         }
+
+        findViewById(R.id.btn3d).setOnClickListener(v ->
+                startActivity(new Intent(MainActivity.this, Campus3DActivity.class)));
     }
 
     private void onPlaceTapped(Place p, Marker dotMarker) {

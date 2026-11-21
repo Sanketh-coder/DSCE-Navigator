@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title>Campus 3D</title>
+    <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+    <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+    <style>
+        html, body { margin: 0; height: 100%; font-family: system-ui, sans-serif; }
+        #map { position: absolute; inset: 0; }
+        .bar { position: absolute; left: 12px; bottom: 28px; z-index: 2; display: flex; gap: 8px; }
+        .bar button {
+          padding: 10px 14px; border: 0; border-radius: 10px; font-size: 14px;
+          background: #1565C0; color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.3);
+        }
+        .bar button.alt { background: #fff; color: #1A1A1A; }
+    </style>
+</head>
+<body>
+<div id="map"></div>
+<div class="bar">
+    <button id="flat">Top view</button>
+    <button id="tilt">3D view</button>
+    <button id="spin" class="alt">Rotate</button>
+</div>
+
+<script>
+    // 3D map approach adapted from a friend's example (MapLibre GL JS + OpenFreeMap).
+    // The Android app sends the place list by calling setPlaces().
+    var places = { type: "FeatureCollection", features: [] };
+    var ready = false;
+
+    function setPlaces(list) {
+      places.features = list.map(function (p) {
+        return {
+          type: "Feature",
+          properties: { name: p.name },
+          geometry: { type: "Point", coordinates: [p.lon, p.lat] }
+        };
+      });
+      if (ready) { map.getSource("places").setData(places); }
+    }
+
+    var map = new maplibregl.Map({
+      container: "map",
+      style: "https://tiles.openfreemap.org/styles/liberty",
+      center: [77.5667, 12.9083],
+      zoom: 16.6,
+      pitch: 60,
+      bearing: -20,
+      maxPitch: 85
+    });
+    map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
+
+    map.on("load", function () {
+      if (map.getLayer("building-3d")) { map.removeLayer("building-3d"); }
+      var firstLabel = map.getStyle().layers.find(function (l) { return l.type === "symbol"; });
+
+      map.addLayer({
+        id: "my-3d-buildings",
+        source: "openmaptiles",
+        "source-layer": "building",
+        type: "fill-extrusion",
+        minzoom: 14,
+        paint: {
+          "fill-extrusion-height": ["coalesce", ["get", "render_height"], 8],
+          "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], 0],
+          "fill-extrusion-color": [
+            "interpolate", ["linear"], ["coalesce", ["get", "render_height"], 8],
+            0, "#dfe3e8", 15, "#c4ccd6", 40, "#9fb0c4", 80, "#6f88a8"
+          ],
+          "fill-extrusion-opacity": 0.95,
+          "fill-extrusion-vertical-gradient": true
+        }
+      }, firstLabel ? firstLabel.id : undefined);
+
+      map.addSource("places", { type: "geojson", data: places });
+      map.addLayer({
+        id: "place-labels",
+        type: "symbol",
+        source: "places",
+        layout: {
+          "text-field": ["get", "name"],
+          "text-font": ["Noto Sans Bold"],
+          "text-size": 13,
+          "text-offset": [0, -0.8],
+          "text-allow-overlap": true,
+          "icon-allow-overlap": true
+        },
+        paint: {
+          "text-color": "#0b3d91",
+          "text-halo-color": "#ffffff",
+          "text-halo-width": 2
+        }
+      });
+      map.addLayer({
+        id: "place-dots",
+        type: "circle",
+        source: "places",
+        paint: {
+          "circle-radius": 5,
+          "circle-color": "#e8453c",
+          "circle-stroke-color": "#ffffff",
+          "circle-stroke-width": 2
+        }
+      });
+      ready = true;
+    });
+
+    document.getElementById("flat").onclick = function () {
+      map.easeTo({ pitch: 0, bearing: 0, duration: 800 });
+    };
+    document.getElementById("tilt").onclick = function () {
+      map.easeTo({ pitch: 60, bearing: -20, duration: 800 });
+    };
+
+    var spinning = false;
+    function spin() {
+      if (!spinning) { return; }
+      map.setBearing(map.getBearing() + 0.15);
+      requestAnimationFrame(spin);
+    }
+    document.getElementById("spin").onclick = function () {
+      spinning = !spinning;
+      spin();
+    };
+</script>
+</body>
+</html>
