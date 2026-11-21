@@ -26,7 +26,7 @@ public class DepartmentsActivity extends AppCompatActivity {
         EditText search = findViewById(R.id.searchPlaces);
 
         PlaceAdapter adapter = new PlaceAdapter(CampusData.getPlaces(), place -> {
-            Intent i = new Intent(DepartmentsActivity.this, MainActivity.class);
+            Intent i = new Intent(DepartmentsActivity.this, Campus3DActivity.class);
             i.putExtra("place_name", place.name);
             startActivity(i);
         });

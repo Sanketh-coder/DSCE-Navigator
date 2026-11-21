@@ -68,7 +68,12 @@ public class HomeActivity extends AppCompatActivity {
 
         // Buttons
         findViewById(R.id.cardFind).setOnClickListener(v ->
+                startActivity(new Intent(HomeActivity.this, Campus3DActivity.class)));
+
+        // 2D map: the classic flat map
+        findViewById(R.id.cardMap2d).setOnClickListener(v ->
                 startActivity(new Intent(HomeActivity.this, MainActivity.class)));
+
         findViewById(R.id.cardDepartments).setOnClickListener(v ->
                 startActivity(new Intent(HomeActivity.this, DepartmentsActivity.class)));
         findViewById(R.id.cardAdmission).setOnClickListener(v ->

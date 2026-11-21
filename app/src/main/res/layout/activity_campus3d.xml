@@ -9,25 +9,70 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/btnBack"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:layout_gravity="top|start"
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
         android:layout_margin="12dp"
-        android:clickable="true"
-        android:focusable="true"
-        app:cardBackgroundColor="@color/app_primary"
-        app:cardCornerRadius="24dp"
-        app:cardElevation="6dp">
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:gravity="center"
-            android:text="←"
-            android:textColor="#FFFFFF"
-            android:textSize="22sp" />
-    </com.google.android.material.card.MaterialCardView>
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/btnBack"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:clickable="true"
+            android:focusable="true"
+            app:cardBackgroundColor="@color/app_primary"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="6dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:text="←"
+                android:textColor="#FFFFFF"
+                android:textSize="22sp" />
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            app:cardBackgroundColor="#FFFFFF"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="6dp">
+
+            <AutoCompleteTextView
+                android:id="@+id/searchBox"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@null"
+                android:hint="Search department or building"
+                android:imeOptions="actionDone"
+                android:inputType="text"
+                android:maxLines="1"
+                android:paddingStart="18dp"
+                android:paddingEnd="18dp"
+                android:textColor="#000000"
+                android:textColorHint="#757575"
+                android:textSize="15sp" />
+        </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/infoText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="40dp"
+        android:background="#FFFFFF"
+        android:elevation="6dp"
+        android:padding="14dp"
+        android:text="Search or tap a place"
+        android:textColor="#000000"
+        android:textSize="16sp" />
 
 </FrameLayout>

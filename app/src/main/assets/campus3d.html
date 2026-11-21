@@ -3,33 +3,44 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-    <title>Campus 3D</title>
+    <title>DSCE Navigator 3D</title>
     <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
     <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
     <style>
         html, body { margin: 0; height: 100%; font-family: system-ui, sans-serif; }
         #map { position: absolute; inset: 0; }
-        .bar { position: absolute; left: 12px; bottom: 28px; z-index: 2; display: flex; gap: 8px; }
-        .bar button {
-          padding: 10px 14px; border: 0; border-radius: 10px; font-size: 14px;
-          background: #1565C0; color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.3);
+        .tools {
+          position: absolute; right: 12px; bottom: 120px; z-index: 2;
+          display: flex; flex-direction: column; gap: 10px;
         }
-        .bar button.alt { background: #fff; color: #1A1A1A; }
+        .tools button {
+          width: 48px; height: 48px; border: 0; border-radius: 24px;
+          background: #fff; color: #1565C0; font-size: 15px; font-weight: bold;
+          box-shadow: 0 2px 8px rgba(0,0,0,.3);
+        }
     </style>
 </head>
 <body>
 <div id="map"></div>
-<div class="bar">
-    <button id="flat">Top view</button>
-    <button id="tilt">3D view</button>
-    <button id="spin" class="alt">Rotate</button>
+<div class="tools">
+    <button id="viewBtn">2D</button>
+    <button id="locateBtn">&#9678;</button>
 </div>
 
 <script>
     // 3D map approach adapted from a friend's example (MapLibre GL JS + OpenFreeMap).
-    // The Android app sends the place list by calling setPlaces().
+    // The Android app calls the functions below: setPlaces, selectPlace, setUser,
+    // setRoute, clearRoute, fitRoute and moveCamera.
     var places = { type: "FeatureCollection", features: [] };
+    var userData = { type: "FeatureCollection", features: [] };
+    var routeData = { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: [] } };
     var ready = false;
+    var lastUser = null;
+    var is3d = true;
+    var pendingSelect = null;
+    var pendingFit = false;
+
+    var selectedData = { type: "FeatureCollection", features: [] };
 
     function setPlaces(list) {
       places.features = list.map(function (p) {
@@ -42,6 +53,64 @@
       if (ready) { map.getSource("places").setData(places); }
     }
 
+    function selectPlace(name, fly, label) {
+  if (!ready) { pendingSelect = { name: name, fly: fly, label: label }; return; }
+  map.setFilter("selected-dot", ["==", ["get", "name"], name]);
+  var f = places.features.find(function (p) { return p.properties.name === name; });
+  if (f) {
+    selectedData.features = [{
+      type: "Feature",
+      properties: { label: label || name },
+      geometry: f.geometry
+    }];
+    map.getSource("selected").setData(selectedData);
+    if (fly) {
+      map.flyTo({ center: f.geometry.coordinates, zoom: Math.max(map.getZoom(), 17.5), duration: 1200 });
+    }
+  }
+}
+
+    function setUser(lat, lon, bearing) {
+      lastUser = { lat: lat, lon: lon, bearing: bearing };
+      userData.features = [{
+        type: "Feature",
+        properties: { bearing: bearing },
+        geometry: { type: "Point", coordinates: [lon, lat] }
+      }];
+      if (ready) { map.getSource("user").setData(userData); }
+    }
+
+    function setRoute(coords) {
+      routeData.geometry.coordinates = coords;
+      if (ready) { map.getSource("route").setData(routeData); }
+    }
+
+    function clearRoute() { setRoute([]); }
+
+    function fitRoute() {
+  if (!ready) { pendingFit = true; return; }
+  var c = routeData.geometry.coordinates;
+  if (c.length < 2) { return; }
+  var b = new maplibregl.LngLatBounds(c[0], c[0]);
+  c.forEach(function (p) { b.extend(p); });
+  map.fitBounds(b, {
+    padding: { top: 140, bottom: 170, left: 40, right: 40 },
+    maxZoom: 19, duration: 1000
+  });
+}
+
+    function moveCamera(lat, lon, bearing, pitch, zoom) {
+  if (!ready) { return; }
+  map.easeTo({
+    center: [lon, lat],
+    bearing: bearing,
+    pitch: is3d ? pitch : 0,
+    zoom: zoom > 0 ? zoom : map.getZoom(),
+    offset: [0, 140],
+    duration: 900
+  });
+}
+
     var map = new maplibregl.Map({
       container: "map",
       style: "https://tiles.openfreemap.org/styles/liberty",
@@ -51,7 +120,19 @@
       bearing: -20,
       maxPitch: 85
     });
-    map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
+
+    function arrowImage() {
+      var c = document.createElement("canvas");
+      c.width = 64; c.height = 64;
+      var g = c.getContext("2d");
+      g.fillStyle = "#ffffff";
+      g.beginPath(); g.arc(32, 32, 26, 0, Math.PI * 2); g.fill();
+      g.fillStyle = "#1565C0";
+      g.beginPath();
+      g.moveTo(32, 10); g.lineTo(46, 44); g.lineTo(32, 37); g.lineTo(18, 44);
+      g.closePath(); g.fill();
+      return g.getImageData(0, 0, 64, 64);
+    }
 
     map.on("load", function () {
       if (map.getLayer("building-3d")) { map.removeLayer("building-3d"); }
@@ -75,55 +156,101 @@
         }
       }, firstLabel ? firstLabel.id : undefined);
 
-      map.addSource("places", { type: "geojson", data: places });
+      map.addImage("user-arrow", arrowImage());
+
+      map.addSource("route", { type: "geojson", data: routeData });
       map.addLayer({
-        id: "place-labels",
-        type: "symbol",
-        source: "places",
-        layout: {
-          "text-field": ["get", "name"],
-          "text-font": ["Noto Sans Bold"],
-          "text-size": 13,
-          "text-offset": [0, -0.8],
-          "text-allow-overlap": true,
-          "icon-allow-overlap": true
-        },
-        paint: {
-          "text-color": "#0b3d91",
-          "text-halo-color": "#ffffff",
-          "text-halo-width": 2
-        }
+        id: "route-casing", type: "line", source: "route",
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: { "line-color": "#ffffff", "line-width": 10 }
       });
       map.addLayer({
-        id: "place-dots",
-        type: "circle",
-        source: "places",
+        id: "route-line", type: "line", source: "route",
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: { "line-color": "#1565C0", "line-width": 6 }
+      });
+
+      map.addSource("places", { type: "geojson", data: places });
+      map.addLayer({
+        id: "selected-dot", type: "circle", source: "places",
+        filter: ["==", ["get", "name"], ""],
         paint: {
-          "circle-radius": 5,
+          "circle-radius": 13,
+          "circle-color": "rgba(21,101,192,0.35)",
+          "circle-stroke-color": "#1565C0",
+          "circle-stroke-width": 2
+        }
+      });
+
+      map.addLayer({
+        id: "place-dots", type: "circle", source: "places",
+        paint: {
+          "circle-radius": 6,
           "circle-color": "#e8453c",
           "circle-stroke-color": "#ffffff",
           "circle-stroke-width": 2
         }
       });
-      ready = true;
+
+        map.addSource("selected", { type: "geojson", data: selectedData });
+  map.addLayer({
+    id: "selected-label", type: "symbol", source: "selected",
+    layout: {
+      "text-field": ["get", "label"],
+      "text-font": ["Noto Sans Bold"],
+      "text-size": 14,
+      "text-offset": [0, -1.2],
+      "text-allow-overlap": true
+    },
+    paint: {
+      "text-color": "#0b3d91",
+      "text-halo-color": "#ffffff",
+      "text-halo-width": 2.5
+    }
+  });
+
+      map.addSource("user", { type: "geojson", data: userData });
+      map.addLayer({
+        id: "user-arrow", type: "symbol", source: "user",
+        layout: {
+          "icon-image": "user-arrow",
+          "icon-size": 0.7,
+          "icon-rotate": ["get", "bearing"],
+          "icon-rotation-alignment": "map",
+          "icon-allow-overlap": true,
+          "icon-ignore-placement": true
+        }
+      });
+
+        ready = true;
+  if (pendingSelect) { selectPlace(pendingSelect.name, pendingSelect.fly, pendingSelect.label); pendingSelect = null; }  if (pendingFit) { pendingFit = false; fitRoute(); }
     });
 
-    document.getElementById("flat").onclick = function () {
-      map.easeTo({ pitch: 0, bearing: 0, duration: 800 });
-    };
-    document.getElementById("tilt").onclick = function () {
-      map.easeTo({ pitch: 60, bearing: -20, duration: 800 });
+    // Tapping near a place selects it (the app is told through the Android bridge)
+    map.on("click", function (e) {
+      var pad = 18;
+      var box = [[e.point.x - pad, e.point.y - pad], [e.point.x + pad, e.point.y + pad]];
+      var hits = map.queryRenderedFeatures(box, { layers: ["place-dots"] });
+      if (hits.length > 0 && window.Android) {
+        Android.onPlaceTapped(hits[0].properties.name);
+      }
+    });
+
+    map.on("dragstart", function () {
+      if (window.Android) { Android.onUserMoved(); }
+    });
+
+    document.getElementById("viewBtn").onclick = function () {
+      is3d = !is3d;
+      map.easeTo({ pitch: is3d ? 60 : 0, bearing: is3d ? map.getBearing() : 0, duration: 800 });
+      this.textContent = is3d ? "2D" : "3D";
     };
 
-    var spinning = false;
-    function spin() {
-      if (!spinning) { return; }
-      map.setBearing(map.getBearing() + 0.15);
-      requestAnimationFrame(spin);
-    }
-    document.getElementById("spin").onclick = function () {
-      spinning = !spinning;
-      spin();
+    document.getElementById("locateBtn").onclick = function () {
+      if (window.Android) { Android.onRecenter(); }
+      if (lastUser) {
+        map.easeTo({ center: [lastUser.lon, lastUser.lat], zoom: 18, duration: 800 });
+      }
     };
 </script>
 </body>

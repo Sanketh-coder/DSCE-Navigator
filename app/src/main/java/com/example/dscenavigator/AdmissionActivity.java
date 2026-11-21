@@ -33,7 +33,7 @@ public class AdmissionActivity extends AppCompatActivity {
 
             // Opens the map with this place already selected
             card.findViewById(R.id.btnMap).setOnClickListener(v -> {
-                Intent i = new Intent(AdmissionActivity.this, MainActivity.class);
+                Intent i = new Intent(AdmissionActivity.this, Campus3DActivity.class);
                 i.putExtra("place_name", info.placeName);
                 startActivity(i);
             });

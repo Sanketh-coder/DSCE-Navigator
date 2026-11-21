@@ -617,8 +617,7 @@
                 android:layout_margin="20dp"
                 android:gravity="center"
                 android:lineSpacingExtra="2dp"
-                android:text="Built with Java, Android Studio and osmdroid\nMap data © OpenStreetMap contributors, SRTM | Map style © OpenTopoMap (CC-BY-SA)"
-                android:textColor="@color/app_text_secondary"
+                android:text="Built with Java, Android Studio, MapLibre GL JS and osmdroid\nMap data © OpenStreetMap contributors | 3D map: MapLibre, OpenFreeMap | Classic map style © OpenTopoMap (CC-BY-SA)"                android:textColor="@color/app_text_secondary"
                 android:textSize="11sp" />
         </LinearLayout>
     </ScrollView>

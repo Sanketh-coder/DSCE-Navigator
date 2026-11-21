@@ -69,22 +69,6 @@
     </FrameLayout>
 
 
-
-    <TextView
-        android:id="@+id/btn3d"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="top|end"
-        android:layout_marginTop="76dp"
-        android:layout_marginEnd="12dp"
-        android:background="#FFFFFF"
-        android:clickable="true"
-        android:focusable="true"
-        android:padding="12dp"
-        android:text="3D"
-        android:textColor="#1565C0"
-        android:textSize="15sp"
-        android:textStyle="bold" />
     <!-- bottom distance pill -->
     <TextView
         android:id="@+id/distanceText"

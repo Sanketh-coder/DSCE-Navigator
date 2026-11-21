@@ -37,7 +37,7 @@ public class MainActivity extends AppCompatActivity {
     private MapView map;
     private MyLocationNewOverlay myLocationOverlay;
     private final List<Place> places = new ArrayList<>();
-    private final CampusGraph graph = new CampusGraph();
+    private final CampusGraph graph = CampusData.buildGraph();
     private final HashMap<String, String> viaOf = new HashMap<>();
     private Place selectedPlace;
     private Polyline routeLine;
@@ -78,8 +78,7 @@ public class MainActivity extends AppCompatActivity {
         map.getController().setZoom(18.0);
         map.getController().setCenter(new GeoPoint(12.909473, 77.566848));
 
-        // Walkway network (junctions and bends only)
-        buildGraph();
+
 
         // Gray path lines, only for checking new points. Set to true to see them.
         boolean showPaths = false;
@@ -203,8 +202,6 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        findViewById(R.id.btn3d).setOnClickListener(v ->
-                startActivity(new Intent(MainActivity.this, Campus3DActivity.class)));
     }
 
     private void onPlaceTapped(Place p, Marker dotMarker) {
@@ -216,108 +213,7 @@ public class MainActivity extends AppCompatActivity {
         updateRoute();
     }
 
-    // Junctions and bends only. Buildings are NOT part of this network.
-    private void buildGraph() {
-        int j1 = graph.addNode("Junction 1", 12.909452163940593, 77.56690626199226);
-        int lj = graph.addNode("Library Junction", 12.909259042792195, 77.56689228934977);
-        int b1 = graph.addNode("Bend 1", 12.90899716750334, 77.56685518765237);
-        int b2 = graph.addNode("Bend 2", 12.908977677953816, 77.56670921161641);
-        int j2 = graph.addNode("Junction 2", 12.908654348988824, 77.5666988303368);
-        int j3 = graph.addNode("Junction 3", 12.908611412472947, 77.56639263782078);
-        int round = graph.addNode("Roundabout", 12.908603148965359, 77.56629260024972);
-        int jc4 = graph.addNode("Junction CSE 4", 12.908466933920192, 77.56597023975043);
-        int jc5 = graph.addNode("Junction CSE 5", 12.908127864653343, 77.56602445273128);
-        int j6 = graph.addNode("Junction 6", 12.908410092961743, 77.56573585382016);
-        int b3 = graph.addNode("Bend 3", 12.908487268488631, 77.56547652597578);
-        int b4 = graph.addNode("Bend 4", 12.908015967226282, 77.56630316223328);
-        int b5 = graph.addNode("Bend 5", 12.90825772641125, 77.56637938160114);
-        int b6 = graph.addNode("Bend 6", 12.908231023602807, 77.56652277641766);
-        int j7 = graph.addNode("Junction 7", 12.908032786402046, 77.56661797398587);
-        int b7 = graph.addNode("Bend 7", 12.908148256239866, 77.56676892537583);
-        int b8 = graph.addNode("Bend 8", 12.908180610068786, 77.56692382429856);
-        int b9 = graph.addNode("Bend 9", 12.908342692341485, 77.56693862759742);
-        int b10 = graph.addNode("Bend 10", 12.908370032846431, 77.56700033616666);
-        int j8 = graph.addNode("Junction 8", 12.9085134080523, 77.56702108061448);
-        int b11 = graph.addNode("Bend 11", 12.908525642675148, 77.56680116629576);
-        int j9 = graph.addNode("Junction 9", 12.909474417937995, 77.56651576600096);
-        int b12 = graph.addNode("Bend 12", 12.90918721029665, 77.56628221040849);
-        int j10 = graph.addNode("Junction 10", 12.909430773933972, 77.56753317493545);
-        int j11 = graph.addNode("Junction 11", 12.908675115725668, 77.5675874778338);
-        int j13 = graph.addNode("Junction 13", 12.908485027281984, 77.56758184516191);
-        int j14 = graph.addNode("Junction 14", 12.907550976027444, 77.56700658479666);
-        int j15 = graph.addNode("Junction 15", 12.907484691708188, 77.56726694186878);
-        int j16 = graph.addNode("Junction 16", 12.907526671452993, 77.56679350613977);
-        int j17 = graph.addNode("Junction 17", 12.907454374275545, 77.56639465658326);
-        int b13 = graph.addNode("Bend 13", 12.90741437353605, 77.5659829702111);
-        int b14 = graph.addNode("Bend 14", 12.90896237999502, 77.56758593870494);
-        int b15 = graph.addNode("Bend 15", 12.908146289492963, 77.56757043409074);
-        int b16 = graph.addNode("Bend 16", 12.907738243246898, 77.5674339934193);
-        int b17 = graph.addNode("Bend 17", 12.907785554815762, 77.56671369618405);
-        int b18 = graph.addNode("Bend 18", 12.907087245438182, 77.5663823243488);
-        int b19 = graph.addNode("Bend 19", 12.90721005638239, 77.5670182311133);
-        int j18 = graph.addNode("Junction 18", 12.907969324322213, 77.56568729641981);
-        int b20 = graph.addNode("Bend 20", 12.908545053494494, 77.56638100930793);
-        int b21 = graph.addNode("Bend 21", 12.908339050476645, 77.56637569308572);
-        int b22 = graph.addNode("Bend 22", 12.906732947688875, 77.56697620089976);
 
-        // Top road along the gate
-        graph.connect(j9, j1);
-        graph.connect(j1, j10);
-        // Gate road down to the roundabout
-        graph.connect(j1, lj);
-        graph.connect(lj, b1);
-        graph.connect(b1, b2);
-        graph.connect(b2, j2);
-        graph.connect(j2, j3);
-        graph.connect(j3, round);
-        // Road from top-left down to the roundabout
-        graph.connect(j9, b12);
-        graph.connect(b12, round);
-        // West of the roundabout
-        graph.connect(round, jc4);
-        graph.connect(jc4, jc5);
-        graph.connect(jc4, j6);
-        graph.connect(j6, b3);
-        // Inner ring road
-        graph.connect(jc5, b4);
-        graph.connect(b4, b5);
-        graph.connect(b5, b6);
-        graph.connect(b6, j7);
-        graph.connect(j7, b7);
-        graph.connect(b7, b8);
-        graph.connect(b8, b9);
-        graph.connect(b9, b10);
-        graph.connect(b10, j8);
-        graph.connect(j8, b11);
-        graph.connect(b11, j2);
-        // East road, top to bottom
-        graph.connect(j10, b14);
-        graph.connect(b14, j11);
-        graph.connect(j11, j13);
-        graph.connect(j13, b15);
-        graph.connect(b15, b16);
-        graph.connect(b16, j15);
-        // South road
-        graph.connect(b13, j17);
-        graph.connect(j17, j16);
-        graph.connect(j16, j14);
-        graph.connect(j14, j15);
-        // Roundabout road down to the inner ring road
-        graph.connect(j3, b20);
-        graph.connect(b20, b21);
-        graph.connect(b21, b5);
-        // Inner ring road to the south road
-        graph.connect(j7, b17);
-        graph.connect(b17, j16);
-        // South spurs
-        graph.connect(j17, b18);
-        graph.connect(j14, b19);
-        graph.connect(b19,b22);
-        // West road
-        graph.connect(j6, j18);
-        graph.connect(j18, b13);
-
-    }
 
     private void updateRoute() {
         if (selectedPlace == null) {
