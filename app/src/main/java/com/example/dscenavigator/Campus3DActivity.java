@@ -38,6 +38,18 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.osmdroid.util.GeoPoint;
 
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.graphics.Color;
+import android.view.View;
+import android.widget.LinearLayout;
+import androidx.activity.OnBackPressedCallback;
+import androidx.core.graphics.Insets;
+import androidx.core.view.GravityCompat;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -45,11 +57,22 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import android.text.TextUtils;
+
 public class Campus3DActivity extends AppCompatActivity {
 
     private WebView web;
     private TextView infoText;
     private TextView btnStart;
+
+    private CampusBuildings.Building selectedBuilding;
+    private String highlightDept = null;
+
+    // Side panel (building details)
+    private DrawerLayout drawer;
+    private TextView drawerBadge, drawerTitle, drawerSub, drawerBack;
+    private LinearLayout drawerContent;
+    private View btnNavigate;
     private final List<Place> places = new ArrayList<>();
     private Place selectedPlace;
     private String selectedLabel = "";
@@ -157,6 +180,7 @@ public class Campus3DActivity extends AppCompatActivity {
         btnStart.setOnClickListener(v -> onStartPressed());
         findViewById(R.id.btnClear).setOnClickListener(v -> clearSelection());
         places.addAll(CampusData.getPlaces());
+        setupDrawer();
         pendingPlace = getIntent().getStringExtra("place_name");
 
         setupSearch();
@@ -181,6 +205,7 @@ public class Campus3DActivity extends AppCompatActivity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 pageLoaded = true;
+                view.evaluateJavascript("setBuildings(" + buildBuildingsJson() + ");", null);
                 view.evaluateJavascript("setPlaces(" + buildPlacesJson() + ");", null);
                 pushUserToPage();
                 updateRoute();
@@ -372,12 +397,13 @@ public class Campus3DActivity extends AppCompatActivity {
 
     // ---------- Route and navigation ----------
 
-    // The name shown to the user: what they searched, plus the building if different
+    // The name shown to the user: what they searched, plus the building number
     private String displayName() {
-        if (selectedLabel.isEmpty() || selectedLabel.equals(selectedPlace.name)) {
-            return selectedPlace.name;
+        String base = selectedLabel.isEmpty() ? selectedPlace.name : selectedLabel;
+        if (selectedBuilding != null) {
+            return base + " (Bldg " + selectedBuilding.no + ")";
         }
-        return selectedLabel + " (" + selectedPlace.name + ")";
+        return base;
     }
 
     private void updateRoute() {
@@ -535,9 +561,13 @@ public class Campus3DActivity extends AppCompatActivity {
     // Start / Stop button on the bottom card
     private void onStartPressed() {
         if (selectedPlace == null) {
-            Toast.makeText(this, "Search or tap a place first", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, selectedBuilding != null
+                            ? "This building is not placed on the map yet"
+                            : "Search or tap a place first",
+                    Toast.LENGTH_SHORT).show();
             return;
         }
+        drawer.closeDrawer(GravityCompat.START);
         if (following) {
             // Stop tracking and show the whole route again
             following = false;
@@ -566,11 +596,15 @@ public class Campus3DActivity extends AppCompatActivity {
     // Clears the chosen place and the route (the X button on the bottom card)
     private void clearSelection() {
         selectedPlace = null;
+        selectedBuilding = null;
         selectedLabel = "";
+        highlightDept = null;
         following = false;
         justSelected = false;
         updateStartButton();
+        btnStart.setVisibility(View.GONE);
         infoText.setText("Search or tap a place");
+        showBuildingList();
 
         AutoCompleteTextView box = findViewById(R.id.searchBox);
         box.setText("", false);
@@ -595,6 +629,14 @@ public class Campus3DActivity extends AppCompatActivity {
                 names.add(alias);
             }
         }
+
+        // Building numbers and every department from the key map
+        for (String n : CampusBuildings.searchNames()) {
+            if (!names.contains(n)) {
+                names.add(n);
+            }
+        }
+
         searchBox.setAdapter(new ArrayAdapter<>(this,
                 android.R.layout.simple_dropdown_item_1line, names));
 
@@ -608,37 +650,221 @@ public class Campus3DActivity extends AppCompatActivity {
         });
     }
 
-    // Marks a place as the destination, shows its name on the map, and draws the route.
-    // The name can be a building or a department inside a building.
+    // Works out which building / place a search name means, then selects it.
+    // The name can be a department, a building number, a building name or a place.
     private void selectByName(String name) {
-        String placeName = aliasOf.containsKey(name) ? aliasOf.get(name) : name;
+        String label = name;
+        String placeName;
+        CampusBuildings.Building b = CampusBuildings.forDept(name);
+        int number = CampusBuildings.parseBuildingNumber(name);
 
-        Place found = null;
+        if (b != null) {
+            placeName = CampusBuildings.placeForDept(name, b);
+        } else if (number > 0 && CampusBuildings.byNumber(number) != null) {
+            b = CampusBuildings.byNumber(number);
+            label = b.title;
+            placeName = b.anchor();
+        } else if (CampusBuildings.forTitle(name) != null) {
+            b = CampusBuildings.forTitle(name);
+            label = b.title;
+            placeName = b.anchor();
+        } else {
+            placeName = aliasOf.containsKey(name) ? aliasOf.get(name) : name;
+            b = CampusBuildings.forPlaceName(placeName);
+        }
+        chooseDestination(b, label, placeName);
+    }
+
+    private Place findPlace(String name) {
+        if (name == null) {
+            return null;
+        }
         for (Place p : places) {
-            if (p.name.equals(placeName)) {
-                found = p;
-                break;
+            if (p.name.equals(name)) {
+                return p;
             }
         }
+        return null;
+    }
+
+    // Marks the destination: label above the pin, route preview, building details in the panel
+    private void chooseDestination(CampusBuildings.Building b, String label, String placeName) {
+        Place found = findPlace(placeName);
+        if (found == null && b != null) {
+            found = findPlace(b.anchor());
+        }
+        if (found == null && b == null) {
+            return; // nothing we know about
+        }
+
+        selectedBuilding = b;
+        selectedPlace = found;
+        selectedLabel = label;
+        following = false;
+        justSelected = true;
+        updateStartButton();
+
+        // The Start button only appears once a place on the map is chosen
+        btnStart.setVisibility(found != null ? View.VISIBLE : View.GONE);
+
+        // Is the label a department inside the building? Then highlight it in the panel
+        highlightDept = null;
+        if (b != null) {
+            for (String dept : b.depts) {
+                if (dept.equalsIgnoreCase(label)) {
+                    highlightDept = dept;
+                }
+            }
+            showBuildingDetail(b, highlightDept);
+        } else {
+            showBuildingList();
+        }
+
         if (found == null) {
+            // On the key map, but it has no GPS position yet
+            infoText.setText(label + " (Bldg " + b.no + "): not placed on the map yet");
+            if (pageLoaded) {
+                web.evaluateJavascript("clearSelection();", null);
+            }
+            drawer.openDrawer(GravityCompat.START);
             return;
         }
 
-        selectedPlace = found;
-        selectedLabel = name;
         infoText.setText(displayName());
-        justSelected = true;
-        following = false;
-        updateStartButton();
         if (lastLocation == null) {
             startLocation();
         }
-
-        // Without a location we can only fly to the place
         boolean flyToPlace = (lastLocation == null);
-        web.evaluateJavascript("selectPlace(" + JSONObject.quote(selectedPlace.name)
-                + ", " + flyToPlace + ", " + JSONObject.quote(selectedLabel) + ");", null);
+        if (pageLoaded) {
+            web.evaluateJavascript("selectPoint(" + found.lat + ", " + found.lon + ", "
+                    + JSONObject.quote(label) + ", " + flyToPlace + ");", null);
+        }
         updateRoute();
+    }
+
+    // ---------- Side panel: buildings and their departments ----------
+
+    private void setupDrawer() {
+        drawer = findViewById(R.id.drawerLayout);
+        drawerBadge = findViewById(R.id.drawerBadge);
+        drawerTitle = findViewById(R.id.drawerTitle);
+        drawerSub = findViewById(R.id.drawerSub);
+        drawerBack = findViewById(R.id.drawerBack);
+        drawerContent = findViewById(R.id.drawerContent);
+        btnNavigate = findViewById(R.id.btnNavigate);
+
+        // Keep the map visible behind the panel
+        drawer.setScrimColor(Color.TRANSPARENT);
+
+        // Keep the panel header clear of the status bar
+        View header = findViewById(R.id.drawerHeader);
+        ViewCompat.setOnApplyWindowInsetsListener(header, (v, insets) -> {
+            Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(v.getPaddingLeft(), bars.top, v.getPaddingRight(), v.getPaddingBottom());
+            return insets;
+        });
+
+        findViewById(R.id.btnBuildings).setOnClickListener(v -> drawer.openDrawer(GravityCompat.START));
+        findViewById(R.id.btnInfo).setOnClickListener(v -> drawer.openDrawer(GravityCompat.START));
+        drawerBack.setOnClickListener(v -> showBuildingList());
+        btnNavigate.setOnClickListener(v -> {
+            drawer.closeDrawer(GravityCompat.START);
+            if (selectedPlace != null) {
+                justSelected = true;
+                updateRoute();
+            }
+        });
+
+        // Back button closes the panel first
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (drawer.isDrawerOpen(GravityCompat.START)) {
+                    drawer.closeDrawer(GravityCompat.START);
+                } else {
+                    setEnabled(false);
+                    getOnBackPressedDispatcher().onBackPressed();
+                }
+            }
+        });
+
+        showBuildingList();
+    }
+
+    private boolean isMapped(CampusBuildings.Building b) {
+        return b.anchor() != null && findPlace(b.anchor()) != null;
+    }
+
+    // All buildings, in number order, with what is inside each one
+    private void showBuildingList() {
+        drawerBadge.setText("🏢");
+        drawerTitle.setText("Campus Buildings");
+        drawerSub.setText(CampusBuildings.all().size() + " buildings  •  tap one for details");
+        drawerBack.setVisibility(View.GONE);
+        btnNavigate.setVisibility(View.GONE);
+        drawerContent.removeAllViews();
+
+        for (CampusBuildings.Building b : CampusBuildings.all()) {
+            View row = getLayoutInflater().inflate(R.layout.item_building_row, drawerContent, false);
+            ((TextView) row.findViewById(R.id.rowNumber)).setText(String.valueOf(b.no));
+            ((TextView) row.findViewById(R.id.rowTitle)).setText(b.title);
+            ((TextView) row.findViewById(R.id.rowSub)).setText(
+                    b.depts.length == 0 ? "Nothing listed yet" : TextUtils.join(", ", b.depts));
+            row.setOnClickListener(v -> chooseDestination(b, b.title, b.anchor()));
+            drawerContent.addView(row);
+        }
+    }
+
+    // One building: its number and everything inside it
+    private void showBuildingDetail(CampusBuildings.Building b, String dept) {
+        drawerBadge.setText(String.valueOf(b.no));
+        drawerTitle.setText(b.title);
+        int n = b.depts.length;
+        drawerSub.setText(n + (n == 1 ? " place inside" : " places inside"));
+        drawerBack.setVisibility(View.VISIBLE);
+        btnNavigate.setVisibility(isMapped(b) ? View.VISIBLE : View.GONE);
+        drawerContent.removeAllViews();
+
+        addSection("INSIDE THIS BUILDING");
+        if (n == 0) {
+            addInfoLine("Nothing listed yet", "");
+        }
+        for (String name : b.depts) {
+            TextView row = (TextView) getLayoutInflater()
+                    .inflate(R.layout.item_dept_row, drawerContent, false);
+            boolean match = name.equals(dept);
+            row.setText((match ? "📍  " : "•  ") + name);
+            if (match) {
+                row.setBackgroundResource(R.drawable.bg_icon_blue);
+                row.setTypeface(row.getTypeface(), android.graphics.Typeface.BOLD);
+            }
+            row.setOnClickListener(v -> chooseDestination(b, name, CampusBuildings.placeForDept(name, b)));
+            drawerContent.addView(row);
+        }
+
+        if (!isMapped(b)) {
+            addSection("NOTE");
+            addInfoLine("Not placed on the map yet", "");
+        }
+        if (!b.info.isEmpty()) {
+            addSection("MORE");
+            addInfoLine(b.info, "");
+        }
+    }
+    private void addSection(String title) {
+        TextView t = (TextView) getLayoutInflater()
+                .inflate(R.layout.item_section_title, drawerContent, false);
+        t.setText(title);
+        drawerContent.addView(t);
+    }
+
+    private void addInfoLine(String label, String value) {
+        TextView t = (TextView) getLayoutInflater()
+                .inflate(R.layout.item_dept_row, drawerContent, false);
+        t.setText(value.isEmpty() ? label : label + ":  " + value);
+        t.setClickable(false);
+        t.setFocusable(false);
+        drawerContent.addView(t);
     }
 
     // The page calls these through the "Android" bridge
@@ -646,6 +872,36 @@ public class Campus3DActivity extends AppCompatActivity {
         @JavascriptInterface
         public void onPlaceTapped(String name) {
             runOnUiThread(() -> selectByName(name));
+        }
+
+        @JavascriptInterface
+        public void onBuildingTapped(String number) {
+            runOnUiThread(() -> {
+                int no;
+                try {
+                    no = Integer.parseInt(number);
+                } catch (NumberFormatException e) {
+                    return;
+                }
+                CampusBuildings.Building b = CampusBuildings.byNumber(no);
+                if (b != null) {
+                    chooseDestination(b, b.title, b.anchor());
+                    drawer.openDrawer(GravityCompat.START);
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void onMapLongPress(double lat, double lon) {
+            // Handy for adding new buildings: copies the position of the spot you pressed
+            runOnUiThread(() -> {
+                String text = lat + ", " + lon;
+                ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                if (cm != null) {
+                    cm.setPrimaryClip(ClipData.newPlainText("position", text));
+                }
+                Toast.makeText(Campus3DActivity.this, "Copied: " + text, Toast.LENGTH_LONG).show();
+            });
         }
 
         @JavascriptInterface
@@ -680,14 +936,40 @@ public class Campus3DActivity extends AppCompatActivity {
 
     // ---------- Helpers ----------
 
+    // Places that are NOT part of a numbered building (gates, ground, temple...)
     private String buildPlacesJson() {
         JSONArray array = new JSONArray();
         try {
             for (Place p : places) {
+                if (CampusBuildings.forPlaceName(p.name) != null) {
+                    continue;
+                }
                 JSONObject obj = new JSONObject();
                 obj.put("name", p.name);
                 obj.put("lat", p.lat);
                 obj.put("lon", p.lon);
+                array.put(obj);
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return array.toString();
+    }
+
+    // One numbered pin per building that has a position
+    private String buildBuildingsJson() {
+        JSONArray array = new JSONArray();
+        try {
+            for (CampusBuildings.Building b : CampusBuildings.all()) {
+                Place anchor = findPlace(b.anchor());
+                if (anchor == null) {
+                    continue;
+                }
+                JSONObject obj = new JSONObject();
+                obj.put("no", b.no);
+                obj.put("name", b.title);
+                obj.put("lat", anchor.lat);
+                obj.put("lon", anchor.lon);
                 array.put(obj);
             }
         } catch (JSONException e) {

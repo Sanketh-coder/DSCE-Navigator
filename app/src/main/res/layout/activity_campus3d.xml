@@ -1,176 +1,335 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/drawerLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <WebView
-        android:id="@+id/web"
+    <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent">
 
-    <!-- soft dark fade so status bar icons stay readable -->
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="120dp"
-        android:layout_gravity="top"
-        android:background="@drawable/bg_scrim_top" />
+        <WebView
+            android:id="@+id/web"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
 
-    <!-- top row: back button + search bar -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="top"
-        android:fitsSystemWindows="true"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:padding="12dp">
+        <!-- soft dark fade so status bar icons stay readable -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="120dp"
+            android:layout_gravity="top"
+            android:background="@drawable/bg_scrim_top" />
 
+        <!-- top row: back button + search bar -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top"
+            android:fitsSystemWindows="true"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="12dp">
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/btnBack"
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                android:clickable="true"
+                android:focusable="true"
+                app:cardBackgroundColor="@color/app_primary"
+                app:cardCornerRadius="26dp"
+                app:cardElevation="10dp"
+                app:strokeWidth="0dp">
+
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/bg_header">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_gravity="center"
+                        android:contentDescription="Back"
+                        android:src="@drawable/ic_back_arrow" />
+                </FrameLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                app:cardBackgroundColor="@color/app_card"
+                app:cardCornerRadius="26dp"
+                app:cardElevation="10dp"
+                app:strokeColor="@color/card_stroke"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="18dp"
+                    android:paddingEnd="8dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🔍"
+                        android:textSize="17sp" />
+
+                    <AutoCompleteTextView
+                        android:id="@+id/searchBox"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:background="@null"
+                        android:hint="Search a department or building"
+                        android:imeOptions="actionDone"
+                        android:inputType="text"
+                        android:maxLines="1"
+                        android:paddingStart="12dp"
+                        android:paddingEnd="12dp"
+                        android:popupBackground="@color/app_card"
+                        android:textColor="@color/app_text"
+                        android:textColorHint="@color/app_text_secondary"
+                        android:textSize="15sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+
+        <!-- bottom navigation card -->
         <com.google.android.material.card.MaterialCardView
-            android:id="@+id/btnBack"
-            android:layout_width="52dp"
-            android:layout_height="52dp"
-            android:clickable="true"
-            android:focusable="true"
-            app:cardBackgroundColor="@color/app_primary"
-            app:cardCornerRadius="26dp"
-            app:cardElevation="10dp"
-            app:strokeWidth="0dp">
-
-            <FrameLayout
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="@drawable/bg_header">
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
-                    android:contentDescription="Back"
-                    android:src="@drawable/ic_back_arrow" />
-            </FrameLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_marginStart="10dp"
-            android:layout_weight="1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:layout_marginStart="14dp"
+            android:layout_marginEnd="14dp"
+            android:layout_marginBottom="28dp"
             app:cardBackgroundColor="@color/app_card"
             app:cardCornerRadius="26dp"
-            app:cardElevation="10dp"
+            app:cardElevation="12dp"
             app:strokeColor="@color/card_stroke"
             app:strokeWidth="1dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingStart="18dp"
-                android:paddingEnd="8dp">
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="14dp">
 
-                <TextView
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="🔍"
-                    android:textSize="17sp" />
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
 
-                <AutoCompleteTextView
-                    android:id="@+id/searchBox"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1"
-                    android:background="@null"
-                    android:hint="Where do you want to go?"
-                    android:imeOptions="actionDone"
-                    android:inputType="text"
-                    android:maxLines="1"
-                    android:paddingStart="12dp"
-                    android:paddingEnd="12dp"
-                    android:popupBackground="@color/app_card"
-                    android:textColor="@color/app_text"
-                    android:textColorHint="@color/app_text_secondary"
-                    android:textSize="15sp" />
+                    <TextView
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="@drawable/bg_icon_blue"
+                        android:gravity="center"
+                        android:text="🧭"
+                        android:textSize="24sp" />
+
+                    <TextView
+                        android:id="@+id/infoText"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="14dp"
+                        android:layout_weight="1"
+                        android:fontFamily="sans-serif-medium"
+                        android:lineSpacingExtra="2dp"
+                        android:text="Search or tap a place"
+                        android:textColor="@color/app_text"
+                        android:textSize="15sp" />
+
+                    <TextView
+                        android:id="@+id/btnInfo"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:layout_marginStart="8dp"
+                        android:background="@drawable/bg_icon_blue"
+                        android:clickable="true"
+                        android:contentDescription="Building details"
+                        android:focusable="true"
+                        android:gravity="center"
+                        android:text="ℹ️"
+                        android:textSize="18sp" />
+
+                    <TextView
+                        android:id="@+id/btnClear"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:layout_marginStart="8dp"
+                        android:background="@drawable/bg_icon_pink"
+                        android:clickable="true"
+                        android:contentDescription="Clear route"
+                        android:focusable="true"
+                        android:gravity="center"
+                        android:text="✕"
+                        android:textColor="@color/app_text"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnStart"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="12dp"
+                    android:text="▶  Start"
+                    android:visibility="gone"
+                    android:textAllCaps="false"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    app:backgroundTint="@color/app_primary"
+                    app:cornerRadius="18dp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
-    </LinearLayout>
 
-    <!-- bottom navigation card -->
-    <com.google.android.material.card.MaterialCardView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom"
-        android:layout_marginStart="14dp"
-        android:layout_marginEnd="14dp"
-        android:layout_marginBottom="28dp"
-        app:cardBackgroundColor="@color/app_card"
-        app:cardCornerRadius="26dp"
-        app:cardElevation="12dp"
-        app:strokeColor="@color/card_stroke"
-        app:strokeWidth="1dp">
+        <!-- little tab on the left edge: tap it, or drag from the edge, to open the building panel -->
+        <TextView
+            android:id="@+id/btnBuildings"
+            android:layout_width="34dp"
+            android:layout_height="84dp"
+            android:layout_gravity="start|center_vertical"
+            android:background="@drawable/bg_edge_tab"
+            android:clickable="true"
+            android:contentDescription="All buildings"
+            android:elevation="8dp"
+            android:focusable="true"
+            android:gravity="center"
+            android:text="🏢"
+            android:textSize="18sp" />
 
-        <LinearLayout
+    </FrameLayout>
+
+    <!-- left side panel: building details (drag from the left edge) -->
+    <LinearLayout
+        android:id="@+id/drawerPanel"
+        android:layout_width="300dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="start"
+        android:background="@color/app_background"
+        android:clickable="true"
+        android:focusable="true"
+        android:orientation="vertical">
+
+        <FrameLayout
+            android:id="@+id/drawerHeader"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="14dp">
+            android:background="@drawable/bg_header"
+            android:clipChildren="true">
+
+            <View
+                android:layout_width="150dp"
+                android:layout_height="150dp"
+                android:layout_gravity="top|end"
+                android:layout_marginTop="-50dp"
+                android:layout_marginEnd="-40dp"
+                android:background="@drawable/bg_circle_glass" />
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
+                android:orientation="vertical"
+                android:paddingStart="18dp"
+                android:paddingTop="18dp"
+                android:paddingEnd="18dp"
+                android:paddingBottom="26dp">
 
                 <TextView
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:background="@drawable/bg_icon_blue"
-                    android:gravity="center"
-                    android:text="🧭"
-                    android:textSize="24sp" />
-
-                <TextView
-                    android:id="@+id/infoText"
-                    android:layout_width="0dp"
+                    android:id="@+id/drawerBack"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="14dp"
-                    android:layout_weight="1"
-                    android:fontFamily="sans-serif-medium"
-                    android:lineSpacingExtra="2dp"
-                    android:text="Search or tap a place"
-                    android:textColor="@color/app_text"
-                    android:textSize="15sp" />
-
-                <TextView
-                    android:id="@+id/btnClear"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:layout_marginStart="8dp"
-                    android:background="@drawable/bg_icon_pink"
                     android:clickable="true"
-                    android:contentDescription="Clear route"
                     android:focusable="true"
-                    android:gravity="center"
-                    android:text="✕"
-                    android:textColor="@color/app_text"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
+                    android:paddingTop="4dp"
+                    android:paddingBottom="8dp"
+                    android:text="‹  All buildings"
+                    android:textColor="#C7D2FE"
+                    android:textSize="13sp"
+                    android:visibility="gone" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/drawerBadge"
+                        android:layout_width="60dp"
+                        android:layout_height="60dp"
+                        android:background="@drawable/bg_circle_glass_strong"
+                        android:gravity="center"
+                        android:text="🏢"
+                        android:textColor="#FFFFFF"
+                        android:textSize="24sp"
+                        android:textStyle="bold" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="14dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/drawerTitle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="sans-serif-black"
+                            android:text="Campus Buildings"
+                            android:textColor="#FFFFFF"
+                            android:textSize="18sp" />
+
+                        <TextView
+                            android:id="@+id/drawerSub"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="Tap a building for details"
+                            android:textColor="#E0E7FF"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+                </LinearLayout>
             </LinearLayout>
+        </FrameLayout>
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnStart"
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:overScrollMode="never">
+
+            <LinearLayout
+                android:id="@+id/drawerContent"
                 android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:layout_marginTop="12dp"
-                android:text="▶  Start"
-                android:textAllCaps="false"
-                android:textColor="#FFFFFF"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                app:backgroundTint="@color/app_primary"
-                app:cornerRadius="18dp" />
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="10dp" />
+        </ScrollView>
 
-</FrameLayout>
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnNavigate"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_margin="14dp"
+            android:text="📍  Show route to this building"
+            android:textAllCaps="false"
+            android:textColor="#FFFFFF"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:visibility="gone"
+            app:backgroundTint="@color/app_primary"
+            app:cornerRadius="18dp" />
+    </LinearLayout>
+
+</androidx.drawerlayout.widget.DrawerLayout>

@@ -134,7 +134,9 @@ public class PlaceAdapter extends RecyclerView.Adapter<PlaceAdapter.Holder> {
 
         // Show the category instead of the same placeholder text on every card
         if (p.details == null || p.details.equals("Floor and block details")) {
-            h.details.setText(categoryOf(p.name) + "  •  Tap to navigate");
+            CampusBuildings.Building bld = CampusBuildings.forPlaceName(p.name);
+            String bText = (bld != null) ? "Building " + bld.no + "  •  " : "";
+            h.details.setText(bText + categoryOf(p.name));
         } else {
             h.details.setText(p.details);
         }

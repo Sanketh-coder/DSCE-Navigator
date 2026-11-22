@@ -32,18 +32,18 @@
 
 <script>
     // 3D map approach adapted from a friend's example (MapLibre GL JS + OpenFreeMap).
-    // The Android app calls the functions below: setPlaces, selectPlace, setUser,
-    // setRoute, clearRoute, fitRoute and moveCamera.
-    var places = { type: "FeatureCollection", features: [] };
+    // The Android app calls the functions below: setPlaces, setBuildings, selectPoint,
+    // clearSelection, setUser, setRoute, clearRoute, fitRoute and moveCamera.
+    var places = { type: "FeatureCollection", features: [] };      // places without a building number
+    var buildings = { type: "FeatureCollection", features: [] };   // numbered buildings (key map)
     var userData = { type: "FeatureCollection", features: [] };
     var routeData = { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: [] } };
+    var selectedData = { type: "FeatureCollection", features: [] };
     var ready = false;
     var lastUser = null;
     var is3d = true;
     var pendingSelect = null;
     var pendingFit = false;
-
-    var selectedData = { type: "FeatureCollection", features: [] };
 
     function setPlaces(list) {
       places.features = list.map(function (p) {
@@ -56,22 +56,38 @@
       if (ready) { map.getSource("places").setData(places); }
     }
 
-    function selectPlace(name, fly, label) {
-  if (!ready) { pendingSelect = { name: name, fly: fly, label: label }; return; }
-  map.setFilter("selected-dot", ["==", ["get", "name"], name]);
-  var f = places.features.find(function (p) { return p.properties.name === name; });
-  if (f) {
-    selectedData.features = [{
-      type: "Feature",
-      properties: { label: label || name },
-      geometry: f.geometry
-    }];
-    map.getSource("selected").setData(selectedData);
-    if (fly) {
-      map.flyTo({ center: f.geometry.coordinates, zoom: Math.max(map.getZoom(), 17.5), duration: 1200 });
+    function setBuildings(list) {
+      buildings.features = list.map(function (b) {
+        return {
+          type: "Feature",
+          properties: { no: String(b.no), name: b.name },
+          geometry: { type: "Point", coordinates: [b.lon, b.lat] }
+        };
+      });
+      if (ready) { map.getSource("buildings").setData(buildings); }
     }
-  }
-}
+
+    // Highlights a point and shows a label above it (for example the department name)
+    function selectPoint(lat, lon, label, fly) {
+      if (!ready) { pendingSelect = { lat: lat, lon: lon, label: label, fly: fly }; return; }
+      selectedData.features = [{
+        type: "Feature",
+        properties: { label: label },
+        geometry: { type: "Point", coordinates: [lon, lat] }
+      }];
+      map.getSource("selected").setData(selectedData);
+      if (fly) {
+        map.flyTo({ center: [lon, lat], zoom: Math.max(map.getZoom(), 17.5), duration: 1200 });
+      }
+    }
+
+    function clearSelection() {
+      pendingSelect = null;
+      if (!ready) { return; }
+      selectedData.features = [];
+      map.getSource("selected").setData(selectedData);
+      clearRoute();
+    }
 
     function setUser(lat, lon, bearing) {
       lastUser = { lat: lat, lon: lon, bearing: bearing };
@@ -90,39 +106,29 @@
 
     function clearRoute() { setRoute([]); }
 
-
-
-    function clearSelection() {
-      if (!ready) { return; }
-      map.setFilter("selected-dot", ["==", ["get", "name"], ""]);
-      selectedData.features = [];
-      map.getSource("selected").setData(selectedData);
-      clearRoute();
+    function fitRoute() {
+      if (!ready) { pendingFit = true; return; }
+      var c = routeData.geometry.coordinates;
+      if (c.length < 2) { return; }
+      var b = new maplibregl.LngLatBounds(c[0], c[0]);
+      c.forEach(function (p) { b.extend(p); });
+      map.fitBounds(b, {
+        padding: { top: 140, bottom: 260, left: 40, right: 40 },
+        maxZoom: 19, duration: 1000
+      });
     }
 
-    function fitRoute() {
-  if (!ready) { pendingFit = true; return; }
-  var c = routeData.geometry.coordinates;
-  if (c.length < 2) { return; }
-  var b = new maplibregl.LngLatBounds(c[0], c[0]);
-  c.forEach(function (p) { b.extend(p); });
-  map.fitBounds(b, {
-    padding: { top: 140, bottom: 170, left: 40, right: 40 },
-    maxZoom: 19, duration: 1000
-  });
-}
-
     function moveCamera(lat, lon, bearing, pitch, zoom) {
-  if (!ready) { return; }
-  map.easeTo({
-    center: [lon, lat],
-    bearing: bearing,
-    pitch: is3d ? pitch : 0,
-    zoom: zoom > 0 ? zoom : map.getZoom(),
-    offset: [0, 140],
-    duration: 900
-  });
-}
+      if (!ready) { return; }
+      map.easeTo({
+        center: [lon, lat],
+        bearing: bearing,
+        pitch: is3d ? pitch : 0,
+        zoom: zoom > 0 ? zoom : map.getZoom(),
+        offset: [0, 140],
+        duration: 900
+      });
+    }
 
     var map = new maplibregl.Map({
       container: "map",
@@ -171,11 +177,12 @@
 
       map.addImage("user-arrow", arrowImage());
 
+      // Route
       map.addSource("route", { type: "geojson", data: routeData });
       map.addLayer({
         id: "route-casing", type: "line", source: "route",
         layout: { "line-cap": "round", "line-join": "round" },
-        paint: { "line-color": "#ffffff", "line-width": 10 }
+        paint: { "line-color": "#ffffff", "line-width": 11 }
       });
       map.addLayer({
         id: "route-line", type: "line", source: "route",
@@ -183,18 +190,44 @@
         paint: { "line-color": "#7C3AED", "line-width": 7 }
       });
 
-      map.addSource("places", { type: "geojson", data: places });
+      // Glow around the selected place
+      map.addSource("selected", { type: "geojson", data: selectedData });
       map.addLayer({
-        id: "selected-dot", type: "circle", source: "places",
-        filter: ["==", ["get", "name"], ""],
+        id: "selected-halo", type: "circle", source: "selected",
         paint: {
-          "circle-radius": 13,
-          "circle-color": "rgba(124,58,237,0.35)",
+          "circle-radius": 19,
+          "circle-color": "rgba(124,58,237,0.30)",
           "circle-stroke-color": "#7C3AED",
           "circle-stroke-width": 2
         }
       });
 
+      // Numbered buildings from the key map
+      map.addSource("buildings", { type: "geojson", data: buildings });
+      map.addLayer({
+        id: "building-bubble", type: "circle", source: "buildings",
+        paint: {
+          "circle-radius": ["interpolate", ["linear"], ["zoom"], 15, 6, 17, 9, 19, 12],
+          "circle-color": "#4338CA",
+          "circle-stroke-color": "#ffffff",
+          "circle-stroke-width": 1.8
+        }
+      });
+      map.addLayer({
+        id: "building-number", type: "symbol", source: "buildings",
+        minzoom: 16.2,
+        layout: {
+          "text-field": ["get", "no"],
+          "text-font": ["Noto Sans Bold"],
+          "text-size": ["interpolate", ["linear"], ["zoom"], 16, 7, 17, 9, 19, 12],
+          "text-allow-overlap": true,
+          "text-ignore-placement": true
+        },
+        paint: { "text-color": "#ffffff" }
+      });
+
+      // Other places (gates, ground, temple...) that have no building number
+      map.addSource("places", { type: "geojson", data: places });
       map.addLayer({
         id: "place-dots", type: "circle", source: "places",
         paint: {
@@ -204,24 +237,44 @@
           "circle-stroke-width": 2
         }
       });
+      map.addLayer({
+        id: "place-names", type: "symbol", source: "places",
+        minzoom: 17.4,
+        layout: {
+          "text-field": ["get", "name"],
+          "text-font": ["Noto Sans Bold"],
+          "text-size": 11,
+          "text-anchor": "top",
+          "text-offset": [0, 0.9],
+          "text-max-width": 8
+        },
+        paint: {
+          "text-color": "#9a3412",
+          "text-halo-color": "#ffffff",
+          "text-halo-width": 2
+        }
+      });
 
-        map.addSource("selected", { type: "geojson", data: selectedData });
-  map.addLayer({
-    id: "selected-label", type: "symbol", source: "selected",
-    layout: {
-      "text-field": ["get", "label"],
-      "text-font": ["Noto Sans Bold"],
-      "text-size": 14,
-      "text-offset": [0, -1.2],
-      "text-allow-overlap": true
-    },
-    paint: {
-      "text-color": "#3730A3",
-      "text-halo-color": "#ffffff",
-      "text-halo-width": 2.5
-    }
-  });
+      // Department / place name above the selected building
+      map.addLayer({
+        id: "selected-label", type: "symbol", source: "selected",
+        layout: {
+          "text-field": ["get", "label"],
+          "text-font": ["Noto Sans Bold"],
+          "text-size": 14,
+          "text-anchor": "bottom",
+          "text-offset": [0, -1.7],
+          "text-max-width": 12,
+          "text-allow-overlap": true
+        },
+        paint: {
+          "text-color": "#3730A3",
+          "text-halo-color": "#ffffff",
+          "text-halo-width": 2.5
+        }
+      });
 
+      // You
       map.addSource("user", { type: "geojson", data: userData });
       map.addLayer({
         id: "user-arrow", type: "symbol", source: "user",
@@ -235,23 +288,51 @@
         }
       });
 
-        ready = true;
-  if (pendingSelect) { selectPlace(pendingSelect.name, pendingSelect.fly, pendingSelect.label); pendingSelect = null; }  if (pendingFit) { pendingFit = false; fitRoute(); }
+      ready = true;
+      if (pendingSelect) {
+        selectPoint(pendingSelect.lat, pendingSelect.lon, pendingSelect.label, pendingSelect.fly);
+        pendingSelect = null;
+      }
+      if (pendingFit) { pendingFit = false; fitRoute(); }
     });
 
-    // Tapping near a place selects it (the app is told through the Android bridge)
+    // Tapping a numbered building or a place tells the app through the Android bridge
     map.on("click", function (e) {
-      var pad = 18;
+      var pad = 20;
       var box = [[e.point.x - pad, e.point.y - pad], [e.point.x + pad, e.point.y + pad]];
-      var hits = map.queryRenderedFeatures(box, { layers: ["place-dots"] });
+      var hits = map.queryRenderedFeatures(box, { layers: ["building-bubble", "place-dots"] });
       if (hits.length > 0 && window.Android) {
-        Android.onPlaceTapped(hits[0].properties.name);
+        var props = hits[0].properties;
+        if (props.no) { Android.onBuildingTapped(props.no); }
+        else { Android.onPlaceTapped(props.name); }
       }
     });
 
     map.on("dragstart", function () {
       if (window.Android) { Android.onUserMoved(); }
     });
+
+    // Long press: tells the app the latitude / longitude (handy for adding new buildings)
+    var pressTimer = null;
+    var lastReport = 0;
+    function reportPress(lngLat) {
+      var now = Date.now();
+      if (now - lastReport < 1500) { return; }
+      lastReport = now;
+      if (window.Android) { Android.onMapLongPress(lngLat.lat, lngLat.lng); }
+    }
+    function cancelPress() { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } }
+    map.on("touchstart", function (e) {
+      cancelPress();
+      if (e.originalEvent.touches && e.originalEvent.touches.length !== 1) { return; }
+      var ll = e.lngLat;
+      pressTimer = setTimeout(function () { reportPress(ll); }, 800);
+    });
+    map.on("touchmove", cancelPress);
+    map.on("touchend", cancelPress);
+    map.on("dragstart", cancelPress);
+    map.on("zoomstart", cancelPress);
+    map.on("contextmenu", function (e) { reportPress(e.lngLat); });
 
     document.getElementById("viewBtn").onclick = function () {
       is3d = !is3d;
