@@ -90,6 +90,16 @@
 
     function clearRoute() { setRoute([]); }
 
+
+
+    function clearSelection() {
+      if (!ready) { return; }
+      map.setFilter("selected-dot", ["==", ["get", "name"], ""]);
+      selectedData.features = [];
+      map.getSource("selected").setData(selectedData);
+      clearRoute();
+    }
+
     function fitRoute() {
   if (!ready) { pendingFit = true; return; }
   var c = routeData.geometry.coordinates;

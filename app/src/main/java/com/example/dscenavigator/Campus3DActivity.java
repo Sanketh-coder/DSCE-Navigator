@@ -149,6 +149,7 @@ public class Campus3DActivity extends AppCompatActivity {
 
         findViewById(R.id.btnBack).setOnClickListener(v -> finish());
         infoText = findViewById(R.id.infoText);
+        findViewById(R.id.btnClear).setOnClickListener(v -> clearSelection());
         places.addAll(CampusData.getPlaces());
         pendingPlace = getIntent().getStringExtra("place_name");
 
@@ -447,6 +448,24 @@ public class Campus3DActivity extends AppCompatActivity {
         }
         web.evaluateJavascript("setRoute(" + coords + ");", null);
     }
+
+
+    // Clears the chosen place and the route (the ✕ button on the bottom card)
+    private void clearSelection() {
+        selectedPlace = null;
+        selectedLabel = "";
+        following = false;
+        justSelected = false;
+        infoText.setText("Search or tap a place");
+
+        AutoCompleteTextView box = findViewById(R.id.searchBox);
+        box.setText("", false);
+
+        if (pageLoaded) {
+            web.evaluateJavascript("clearSelection();", null);
+        }
+    }
+
 
     // ---------- Search and selecting a place ----------
 
