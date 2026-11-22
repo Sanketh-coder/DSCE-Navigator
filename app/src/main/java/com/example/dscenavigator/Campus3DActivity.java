@@ -6,6 +6,7 @@ package com.example.dscenavigator;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.hardware.GeomagneticField;
 import android.hardware.Sensor;
@@ -16,6 +17,7 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.view.inputmethod.InputMethodManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
@@ -47,6 +49,7 @@ public class Campus3DActivity extends AppCompatActivity {
 
     private WebView web;
     private TextView infoText;
+    private TextView btnStart;
     private final List<Place> places = new ArrayList<>();
     private Place selectedPlace;
     private String selectedLabel = "";
@@ -93,6 +96,7 @@ public class Campus3DActivity extends AppCompatActivity {
 
         @Override
         public void onProviderEnabled(@NonNull String provider) {
+            startLocation();
         }
 
         @Override
@@ -149,6 +153,8 @@ public class Campus3DActivity extends AppCompatActivity {
 
         findViewById(R.id.btnBack).setOnClickListener(v -> finish());
         infoText = findViewById(R.id.infoText);
+        btnStart = findViewById(R.id.btnStart);
+        btnStart.setOnClickListener(v -> onStartPressed());
         findViewById(R.id.btnClear).setOnClickListener(v -> clearSelection());
         places.addAll(CampusData.getPlaces());
         pendingPlace = getIntent().getStringExtra("place_name");
@@ -196,9 +202,23 @@ public class Campus3DActivity extends AppCompatActivity {
 
     // ---------- Live location and compass ----------
 
-    private boolean hasLocationPermission() {
+    private boolean hasFinePermission() {
         return ContextCompat.checkSelfPermission(this,
                 Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    // Approximate location is enough to get started, so accept either permission
+    private boolean hasLocationPermission() {
+        return hasFinePermission() || ContextCompat.checkSelfPermission(this,
+                Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private boolean providerOn(String provider) {
+        try {
+            return locationManager.isProviderEnabled(provider);
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     @SuppressLint("MissingPermission")
@@ -208,27 +228,92 @@ public class Campus3DActivity extends AppCompatActivity {
         }
         locationManager.removeUpdates(locationListener);
 
-        String provider = null;
-        if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-            provider = LocationManager.GPS_PROVIDER;
-        } else if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
-            provider = LocationManager.NETWORK_PROVIDER;
-        }
+        // GPS is accurate but slow (and weak indoors). Network location (Wi-Fi / mobile)
+        // is quick but rough. Listen to both and use whichever gives the better fix.
+        boolean gps = hasFinePermission() && providerOn(LocationManager.GPS_PROVIDER);
+        boolean network = providerOn(LocationManager.NETWORK_PROVIDER);
 
-        if (provider == null) {
+        if (!gps && !network) {
             Toast.makeText(this, "Turn on Location (GPS) on your phone",
                     Toast.LENGTH_LONG).show();
             return;
         }
 
-        Location last = locationManager.getLastKnownLocation(provider);
-        if (last != null) {
-            handleLocation(last);
+        try {
+            if (gps) {
+                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,
+                        1000, 0, locationListener);
+            }
+            if (network) {
+                locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER,
+                        2000, 0, locationListener);
+            }
+
+            // Show something straight away from the last known position (if it is recent)
+            String[] providers = {LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER};
+            for (String p : providers) {
+                if (!providerOn(p)) {
+                    continue;
+                }
+                Location last = locationManager.getLastKnownLocation(p);
+                if (last != null && System.currentTimeMillis() - last.getTime() < 10 * 60 * 1000) {
+                    handleLocation(last);
+                }
+            }
+        } catch (SecurityException e) {
+            e.printStackTrace();
         }
-        locationManager.requestLocationUpdates(provider, 1000, 1, locationListener);
+    }
+
+    // Decides if a new fix is better than the one we already have
+    private boolean isBetterLocation(Location fresh, Location current) {
+        if (current == null) {
+            return true;
+        }
+        long timeDelta = fresh.getTime() - current.getTime();
+        if (timeDelta > 10000) {
+            return true;
+        }
+        if (timeDelta < -10000) {
+            return false;
+        }
+        int accuracyDelta = (int) (fresh.getAccuracy() - current.getAccuracy());
+        boolean moreAccurate = accuracyDelta < 0;
+        boolean lessAccurate = accuracyDelta > 0;
+        boolean muchLessAccurate = accuracyDelta > 100;
+        boolean sameProvider = fresh.getProvider() != null
+                && fresh.getProvider().equals(current.getProvider());
+
+        if (moreAccurate) {
+            return true;
+        }
+        if (timeDelta > 0 && !lessAccurate) {
+            return true;
+        }
+        return timeDelta > 0 && !muchLessAccurate && sameProvider;
+    }
+
+    // Used by the Start and target buttons: asks for permission / GPS if needed
+    private boolean ensureLocation() {
+        if (!hasLocationPermission()) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION}, 3);
+            return false;
+        }
+        if (!providerOn(LocationManager.GPS_PROVIDER) && !providerOn(LocationManager.NETWORK_PROVIDER)) {
+            Toast.makeText(this, "Please turn on Location", Toast.LENGTH_LONG).show();
+            startActivity(new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS));
+            return false;
+        }
+        startLocation();
+        return lastLocation != null;
     }
 
     private void handleLocation(Location loc) {
+        if (!isBetterLocation(loc, lastLocation)) {
+            return;
+        }
         lastLocation = loc;
         // GPS only knows the direction while we are moving
         if (loc.hasBearing() && loc.getSpeed() > 0.5f) {
@@ -243,7 +328,7 @@ public class Campus3DActivity extends AppCompatActivity {
         if (firstFix) {
             firstFix = false;
             if (selectedPlace == null) {
-                infoText.setText("Location found. Search or tap a place");
+                infoText.setText("Search or tap a place");
             }
         }
         pushUserToPage();
@@ -300,7 +385,7 @@ public class Campus3DActivity extends AppCompatActivity {
             return;
         }
         if (lastLocation == null) {
-            infoText.setText(displayName() + ": waiting for your location...");
+            infoText.setText(displayName() + ": finding your location...\nKeep GPS on and wait a few seconds");
             return;
         }
 
@@ -374,15 +459,13 @@ public class Campus3DActivity extends AppCompatActivity {
 
         sendRouteToPage(points);
 
-        // First update after choosing a place: follow if we are on campus,
-        // otherwise just show the whole route
-        boolean onCampus = me.distanceToAsDouble(graph.getPoint(startNode)) < 300;
+        // First route after choosing a place: show the whole route as a preview.
+        // Tracking starts only when the user presses Start.
         if (justSelected) {
             justSelected = false;
-            following = onCampus;
-            zoomNext = true;
-            camBearing = Double.NaN;
-            if (!onCampus && pageLoaded) {
+            following = false;
+            updateStartButton();
+            if (pageLoaded) {
                 web.evaluateJavascript("fitRoute();", null);
             }
         }
@@ -449,13 +532,44 @@ public class Campus3DActivity extends AppCompatActivity {
         web.evaluateJavascript("setRoute(" + coords + ");", null);
     }
 
+    // Start / Stop button on the bottom card
+    private void onStartPressed() {
+        if (selectedPlace == null) {
+            Toast.makeText(this, "Search or tap a place first", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (following) {
+            // Stop tracking and show the whole route again
+            following = false;
+            updateStartButton();
+            if (pageLoaded) {
+                web.evaluateJavascript("fitRoute();", null);
+            }
+            return;
+        }
+        if (!ensureLocation()) {
+            Toast.makeText(this, "Waiting for your location...", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        // Zoom to the user and follow them along the route
+        following = true;
+        zoomNext = true;
+        camBearing = Double.NaN;
+        updateStartButton();
+        updateRoute();
+    }
 
-    // Clears the chosen place and the route (the ✕ button on the bottom card)
+    private void updateStartButton() {
+        btnStart.setText(following ? "\u25A0  Stop" : "\u25B6  Start");
+    }
+
+    // Clears the chosen place and the route (the X button on the bottom card)
     private void clearSelection() {
         selectedPlace = null;
         selectedLabel = "";
         following = false;
         justSelected = false;
+        updateStartButton();
         infoText.setText("Search or tap a place");
 
         AutoCompleteTextView box = findViewById(R.id.searchBox);
@@ -465,7 +579,6 @@ public class Campus3DActivity extends AppCompatActivity {
             web.evaluateJavascript("clearSelection();", null);
         }
     }
-
 
     // ---------- Search and selecting a place ----------
 
@@ -515,6 +628,11 @@ public class Campus3DActivity extends AppCompatActivity {
         selectedLabel = name;
         infoText.setText(displayName());
         justSelected = true;
+        following = false;
+        updateStartButton();
+        if (lastLocation == null) {
+            startLocation();
+        }
 
         // Without a location we can only fly to the place
         boolean flyToPlace = (lastLocation == null);
@@ -533,17 +651,29 @@ public class Campus3DActivity extends AppCompatActivity {
         @JavascriptInterface
         public void onUserMoved() {
             // The user dragged the map, so stop following
-            runOnUiThread(() -> following = false);
+            runOnUiThread(() -> {
+                following = false;
+                updateStartButton();
+            });
         }
 
         @JavascriptInterface
         public void onRecenter() {
             // The user pressed the target button, so follow again
             runOnUiThread(() -> {
-                following = true;
-                zoomNext = true;
-                camBearing = Double.NaN;
-                updateRoute();
+                if (!ensureLocation()) {
+                    Toast.makeText(Campus3DActivity.this,
+                            "Finding your location... make sure GPS is on",
+                            Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                if (selectedPlace != null) {
+                    following = true;
+                    zoomNext = true;
+                    camBearing = Double.NaN;
+                    updateStartButton();
+                    updateRoute();
+                }
             });
         }
     }
