@@ -9,27 +9,38 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
+    <!-- soft dark fade so status bar icons stay readable -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="120dp"
+        android:layout_gravity="top"
+        android:background="@drawable/bg_scrim_top" />
+
+    <!-- top row: back button + search bar -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="top"
-        android:layout_margin="12dp"
+        android:fitsSystemWindows="true"
         android:gravity="center_vertical"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:padding="12dp">
 
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/btnBack"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="52dp"
+            android:layout_height="52dp"
             android:clickable="true"
             android:focusable="true"
             app:cardBackgroundColor="@color/app_primary"
-            app:cardCornerRadius="24dp"
-            app:cardElevation="6dp">
+            app:cardCornerRadius="26dp"
+            app:cardElevation="10dp"
+            app:strokeWidth="0dp">
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
+                android:background="@drawable/bg_header"
                 android:gravity="center"
                 android:text="←"
                 android:textColor="#FFFFFF"
@@ -38,41 +49,69 @@
 
         <com.google.android.material.card.MaterialCardView
             android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_marginStart="8dp"
+            android:layout_height="52dp"
+            android:layout_marginStart="10dp"
             android:layout_weight="1"
-            app:cardBackgroundColor="#FFFFFF"
-            app:cardCornerRadius="24dp"
-            app:cardElevation="6dp">
+            app:cardBackgroundColor="@color/app_card"
+            app:cardCornerRadius="26dp"
+            app:cardElevation="10dp"
+            app:strokeColor="@color/card_stroke"
+            app:strokeWidth="1dp">
 
-            <AutoCompleteTextView
-                android:id="@+id/searchBox"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:background="@null"
-                android:hint="Search department or building"
-                android:imeOptions="actionDone"
-                android:inputType="text"
-                android:maxLines="1"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
                 android:paddingStart="18dp"
-                android:paddingEnd="18dp"
-                android:textColor="#000000"
-                android:textColorHint="#757575"
-                android:textSize="15sp" />
+                android:paddingEnd="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🔍"
+                    android:textSize="17sp" />
+
+                <AutoCompleteTextView
+                    android:id="@+id/searchBox"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:background="@null"
+                    android:hint="Where do you want to go?"
+                    android:imeOptions="actionDone"
+                    android:inputType="text"
+                    android:maxLines="1"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:popupBackground="@color/app_card"
+                    android:textColor="@color/app_text"
+                    android:textColorHint="@color/app_text_secondary"
+                    android:textSize="15sp" />
+            </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
     </LinearLayout>
 
+    <!-- bottom route / info pill -->
     <TextView
         android:id="@+id/infoText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginStart="20dp"
+        android:layout_marginEnd="20dp"
         android:layout_marginBottom="40dp"
-        android:background="#FFFFFF"
-        android:elevation="6dp"
-        android:padding="14dp"
+        android:background="@drawable/bg_pill_card"
+        android:elevation="10dp"
+        android:fontFamily="sans-serif-medium"
+        android:gravity="center"
+        android:lineSpacingExtra="2dp"
+        android:paddingStart="24dp"
+        android:paddingTop="14dp"
+        android:paddingEnd="24dp"
+        android:paddingBottom="14dp"
         android:text="Search or tap a place"
-        android:textColor="#000000"
-        android:textSize="16sp" />
+        android:textColor="@color/app_text"
+        android:textSize="15sp" />
 
 </FrameLayout>

@@ -14,10 +14,13 @@
           display: flex; flex-direction: column; gap: 10px;
         }
         .tools button {
-          width: 48px; height: 48px; border: 0; border-radius: 24px;
-          background: #fff; color: #1565C0; font-size: 15px; font-weight: bold;
-          box-shadow: 0 2px 8px rgba(0,0,0,.3);
+          width: 52px; height: 52px; border: 0; border-radius: 26px;
+          background: linear-gradient(135deg, #4338CA, #7C3AED);
+          color: #fff; font-size: 15px; font-weight: bold;
+          box-shadow: 0 6px 16px rgba(67,56,202,.45);
+          transition: transform .15s ease;
         }
+        .tools button:active { transform: scale(.88); }
     </style>
 </head>
 <body>
@@ -127,7 +130,7 @@
       var g = c.getContext("2d");
       g.fillStyle = "#ffffff";
       g.beginPath(); g.arc(32, 32, 26, 0, Math.PI * 2); g.fill();
-      g.fillStyle = "#1565C0";
+      g.fillStyle = "#4338CA";
       g.beginPath();
       g.moveTo(32, 10); g.lineTo(46, 44); g.lineTo(32, 37); g.lineTo(18, 44);
       g.closePath(); g.fill();
@@ -167,7 +170,7 @@
       map.addLayer({
         id: "route-line", type: "line", source: "route",
         layout: { "line-cap": "round", "line-join": "round" },
-        paint: { "line-color": "#1565C0", "line-width": 6 }
+        paint: { "line-color": "#7C3AED", "line-width": 7 }
       });
 
       map.addSource("places", { type: "geojson", data: places });
@@ -176,8 +179,8 @@
         filter: ["==", ["get", "name"], ""],
         paint: {
           "circle-radius": 13,
-          "circle-color": "rgba(21,101,192,0.35)",
-          "circle-stroke-color": "#1565C0",
+          "circle-color": "rgba(124,58,237,0.35)",
+          "circle-stroke-color": "#7C3AED",
           "circle-stroke-width": 2
         }
       });
@@ -186,7 +189,7 @@
         id: "place-dots", type: "circle", source: "places",
         paint: {
           "circle-radius": 6,
-          "circle-color": "#e8453c",
+          "circle-color": "#F97316",
           "circle-stroke-color": "#ffffff",
           "circle-stroke-width": 2
         }
@@ -203,7 +206,7 @@
       "text-allow-overlap": true
     },
     paint: {
-      "text-color": "#0b3d91",
+      "text-color": "#3730A3",
       "text-halo-color": "#ffffff",
       "text-halo-width": 2.5
     }

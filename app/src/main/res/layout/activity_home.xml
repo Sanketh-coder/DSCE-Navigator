@@ -178,7 +178,7 @@
                         android:paddingTop="2dp"
                         android:paddingEnd="8dp"
                         android:paddingBottom="2dp"
-                        android:text="● LIVE MAP"
+                        android:text="● 3D LIVE MAP"
                         android:textColor="#FFFFFF"
                         android:textSize="10sp"
                         android:textStyle="bold" />
@@ -206,7 +206,7 @@
                     android:layout_height="40dp"
                     android:background="@drawable/bg_circle_glass_strong"
                     android:gravity="center"
-                    android:text="→"
+                    android:text="›"
                     android:textColor="#FFFFFF"
                     android:textSize="20sp"
                     android:textStyle="bold" />
@@ -218,44 +218,47 @@
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/cardMap2d"
             android:layout_width="match_parent"
-            android:layout_height="84dp"
+            android:layout_height="wrap_content"
             android:layout_marginStart="20dp"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="14dp"
             android:layout_marginEnd="20dp"
             android:clickable="true"
             android:focusable="true"
             app:cardBackgroundColor="@color/app_card"
-            app:cardCornerRadius="18dp"
-            app:cardElevation="4dp"
-            app:strokeColor="@color/app_primary"
-            app:strokeWidth="2dp">
+            app:cardCornerRadius="24dp"
+            app:cardElevation="2dp"
+            app:strokeColor="@color/card_stroke"
+            app:strokeWidth="1dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_height="wrap_content"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
-                android:paddingStart="20dp"
-                android:paddingEnd="20dp">
+                android:padding="16dp">
 
                 <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
+                    android:background="@drawable/bg_icon_blue"
+                    android:gravity="center"
                     android:text="🗺️"
-                    android:textSize="32sp" />
+                    android:textSize="26sp" />
 
                 <LinearLayout
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="16dp"
+                    android:layout_marginStart="14dp"
+                    android:layout_weight="1"
                     android:orientation="vertical">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:fontFamily="sans-serif-medium"
                         android:text="2D Map"
                         android:textColor="@color/app_text"
-                        android:textSize="17sp"
+                        android:textSize="16sp"
                         android:textStyle="bold" />
 
                     <TextView
@@ -264,8 +267,15 @@
                         android:layout_marginTop="2dp"
                         android:text="Simple flat map, lighter on your phone"
                         android:textColor="@color/app_text_secondary"
-                        android:textSize="13sp" />
+                        android:textSize="12sp" />
                 </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="›"
+                    android:textColor="@color/app_text_secondary"
+                    android:textSize="28sp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
